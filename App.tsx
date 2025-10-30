@@ -6,38 +6,47 @@ import LeadModal from './components/LeadModal';
 import SettingsModal from './components/SettingsModal';
 import { Lead, LeadData, LeadStatus, ApiConfig } from './types';
 import { parseLeadsWithRegex } from './services/aiService';
+import { fetchLeads, createLeads, updateLead, deleteLead as deleteLeadFromDB } from './services/databaseService';
 import { LayoutGridIcon, WandSparklesIcon, SettingsIcon } from './components/icons';
 
 const App: React.FC = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [apiConfig, setApiConfig] = useState<ApiConfig>({
       provider: 'gemini',
       apiKey: '',
       model: ''
   });
 
+  // Load leads from database on mount
   useEffect(() => {
+    const loadLeads = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const fetchedLeads = await fetchLeads();
+        setLeads(fetchedLeads);
+      } catch (err: any) {
+        console.error("Failed to load leads from database", err);
+        setError(err.message || "Failed to load leads. Please check your API connection.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    // Load API config from localStorage (still kept local)
     try {
-      const storedLeads = localStorage.getItem('google-ads-leads');
-      if (storedLeads) setLeads(JSON.parse(storedLeads));
-      
       const storedApiConfig = localStorage.getItem('ai-api-config');
       if (storedApiConfig) setApiConfig(JSON.parse(storedApiConfig));
-
     } catch (error) {
-      console.error("Failed to load data from localStorage", error);
+      console.error("Failed to load API config from localStorage", error);
     }
+
+    loadLeads();
   }, []);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('google-ads-leads', JSON.stringify(leads));
-    } catch (error) {
-      console.error("Failed to save leads to localStorage", error);
-    }
-  }, [leads]);
 
   const handleSaveApiConfig = useCallback((config: ApiConfig) => {
       setApiConfig(config);
@@ -61,7 +70,12 @@ const App: React.FC = () => {
             status: 'New' as LeadStatus,
             notes: '',
           })).reverse();
-          setLeads(prevLeads => [...newLeads, ...prevLeads]);
+
+          // Save to database
+          const createdLeads = await createLeads(newLeads);
+
+          // Update local state with created leads
+          setLeads(prevLeads => [...createdLeads, ...prevLeads]);
         } else {
           throw new Error("Failed to parse lead data. Please check the format and try again.");
         }
@@ -71,8 +85,16 @@ const App: React.FC = () => {
     }
   }, []);
   
-  const handleDeleteLead = useCallback((id: string) => {
-    setLeads(prevLeads => prevLeads.filter(lead => lead.id !== id));
+  const handleDeleteLead = useCallback(async (id: string) => {
+    try {
+      // Delete from database
+      await deleteLeadFromDB(id);
+      // Update local state
+      setLeads(prevLeads => prevLeads.filter(lead => lead.id !== id));
+    } catch (error) {
+      console.error("Failed to delete lead", error);
+      throw error;
+    }
   }, []);
 
   const handleSelectLead = useCallback((lead: Lead) => {
@@ -83,16 +105,34 @@ const App: React.FC = () => {
     setSelectedLead(null);
   }, []);
 
-  const handleUpdateLead = useCallback((updatedLead: Lead) => {
-    setLeads(prevLeads => 
-        prevLeads.map(lead => lead.id === updatedLead.id ? updatedLead : lead)
-    );
-    setSelectedLead(null);
+  const handleUpdateLead = useCallback(async (updatedLead: Lead) => {
+    try {
+      // Update in database
+      await updateLead(updatedLead);
+      // Update local state
+      setLeads(prevLeads =>
+          prevLeads.map(lead => lead.id === updatedLead.id ? updatedLead : lead)
+      );
+      setSelectedLead(null);
+    } catch (error) {
+      console.error("Failed to update lead", error);
+      throw error;
+    }
   }, []);
 
   return (
     <div className="min-h-screen text-[--text-primary] bg-[--background-dark]">
-      
+
+      {/* Error Banner */}
+      {error && (
+        <div className="bg-red-900/50 border-b border-red-700 px-4 py-3">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            <p className="text-red-100 text-sm">⚠️ {error}</p>
+            <button onClick={() => setError(null)} className="text-red-100 hover:text-white">✕</button>
+          </div>
+        </div>
+      )}
+
       <header className="bg-[--content-dark]/50 backdrop-blur-sm sticky top-0 z-10 border-b border-[--border-dark]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex items-center justify-between h-16">
@@ -113,27 +153,38 @@ const App: React.FC = () => {
       </header>
       
       <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
-          <div className="flex items-center">
-             <LayoutGridIcon className="w-6 h-6 mr-3 text-blue-400"/>
-             <div>
-                <h1 className="text-2xl font-bold text-white">
-                  Analytics & Insights
-                </h1>
-                <p className="text-md text-[--text-secondary]">
-                  Your central hub for analyzing ad leads.
-                </p>
-             </div>
-          </div>
-          <AnalyticsDashboard 
-              leads={leads} 
-              apiConfig={apiConfig}
-              onConfigureApi={() => setIsSettingsModalOpen(true)}
-          />
-          
-          <div className="space-y-8">
-              <LeadInputForm onAddLeads={handleAddLeads} />
-              <LeadList leads={leads} onDeleteLead={handleDeleteLead} onSelectLead={handleSelectLead} />
-          </div>
+          {isLoading ? (
+            <div className="flex items-center justify-center min-h-[400px]">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4"></div>
+                <p className="text-[--text-secondary]">Loading leads from database...</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center">
+                <LayoutGridIcon className="w-6 h-6 mr-3 text-blue-400"/>
+                <div>
+                  <h1 className="text-2xl font-bold text-white">
+                    Analytics & Insights
+                  </h1>
+                  <p className="text-md text-[--text-secondary]">
+                    Your central hub for analyzing ad leads.
+                  </p>
+                </div>
+              </div>
+              <AnalyticsDashboard
+                  leads={leads}
+                  apiConfig={apiConfig}
+                  onConfigureApi={() => setIsSettingsModalOpen(true)}
+              />
+
+              <div className="space-y-8">
+                  <LeadInputForm onAddLeads={handleAddLeads} />
+                  <LeadList leads={leads} onDeleteLead={handleDeleteLead} onSelectLead={handleSelectLead} />
+              </div>
+            </>
+          )}
       </main>
 
         {selectedLead && (

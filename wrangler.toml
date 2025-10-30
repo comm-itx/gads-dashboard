@@ -1,0 +1,25 @@
+name = "gads-dashboard-api"
+main = "worker/index.ts"
+compatibility_date = "2024-10-30"
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "gads-leads-db"
+database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" # Will be created with: wrangler d1 create gads-leads-db
+
+# Environment variables
+[vars]
+# Add any public variables here
+
+# For local development
+[env.development]
+name = "gads-dashboard-api-dev"
+
+# For production
+[env.production]
+name = "gads-dashboard-api"
+
+# CORS settings for Pages integration
+[site]
+bucket = ""
