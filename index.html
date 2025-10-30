@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Google Ads Lead Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://use.typekit.net/jpt2wfg.css">
+    <style>
+        :root {
+            --font-proxima-nova: "proxima-nova", "system-ui", "sans-serif";
+            --background-dark: #202020;
+            --content-dark: #262626;
+            --border-dark: #3a3a3a;
+            --text-primary: #f0f0f0;
+            --text-secondary: #a0a0a0;
+            --accent-blue: #3b82f6;
+        }
+        body {
+            font-family: var(--font-proxima-nova);
+            background-color: var(--background-dark);
+            color: var(--text-primary);
+        }
+        /* For Recharts Tooltip */
+        .recharts-default-tooltip {
+            background-color: var(--content-dark) !important;
+            border: 1px solid var(--border-dark) !important;
+            border-radius: 0.5rem !important;
+            color: var(--text-primary) !important;
+        }
+        .recharts-tooltip-label {
+            color: var(--text-primary) !important;
+        }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.27.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "recharts": "https://aistudiocdn.com/recharts@^3.3.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
