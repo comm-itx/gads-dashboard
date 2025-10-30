@@ -6,7 +6,7 @@ compatibility_date = "2024-10-30"
 [[d1_databases]]
 binding = "DB"
 database_name = "gads-leads-db"
-database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" # Will be created with: wrangler d1 create gads-leads-db
+database_id = "2dafe663-be29-44b0-aa60-b7b940555aea"
 
 # Environment variables
 [vars]
