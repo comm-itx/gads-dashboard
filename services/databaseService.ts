@@ -8,11 +8,21 @@ import { Lead } from '../types';
 // Get API URL from environment variable or use default for local development
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 
+// Debug: Log the API URL being used
+console.log('🔍 Database Service - API_URL:', API_URL);
+console.log('🔍 Environment check:', {
+  VITE_API_URL: import.meta.env.VITE_API_URL,
+  MODE: import.meta.env.MODE,
+  DEV: import.meta.env.DEV,
+  PROD: import.meta.env.PROD
+});
+
 /**
  * Fetch all leads from the database
  */
 export const fetchLeads = async (): Promise<Lead[]> => {
   try {
+    console.log('📡 Fetching leads from:', `${API_URL}/api/leads`);
     const response = await fetch(`${API_URL}/api/leads`);
     if (!response.ok) {
       throw new Error(`Failed to fetch leads: ${response.statusText}`);
@@ -48,6 +58,9 @@ export const fetchLeadById = async (id: string): Promise<Lead | null> => {
  */
 export const createLeads = async (leads: Lead[]): Promise<Lead[]> => {
   try {
+    console.log('📝 Creating leads - URL:', `${API_URL}/api/leads`);
+    console.log('📝 Payload:', { leads });
+
     const response = await fetch(`${API_URL}/api/leads`, {
       method: 'POST',
       headers: {
@@ -56,15 +69,19 @@ export const createLeads = async (leads: Lead[]): Promise<Lead[]> => {
       body: JSON.stringify({ leads }),
     });
 
+    console.log('📝 Response status:', response.status, response.statusText);
+
     if (!response.ok) {
       const errorData = await response.json();
+      console.error('📝 Error response:', errorData);
       throw new Error(errorData.error || `Failed to create leads: ${response.statusText}`);
     }
 
     const data = await response.json();
+    console.log('📝 Success response:', data);
     return data.leads || [];
   } catch (error) {
-    console.error('Error creating leads:', error);
+    console.error('❌ Error creating leads:', error);
     throw error;
   }
 };
