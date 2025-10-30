@@ -4,12 +4,14 @@ import LeadList from './components/LeadList';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
 import LeadModal from './components/LeadModal';
 import SettingsModal from './components/SettingsModal';
+import PasswordModal from './components/PasswordModal';
 import { Lead, LeadData, LeadStatus, ApiConfig } from './types';
 import { parseLeadsWithRegex } from './services/aiService';
 import { fetchLeads, createLeads, updateLead, deleteLead as deleteLeadFromDB } from './services/databaseService';
 import { LayoutGridIcon, WandSparklesIcon, SettingsIcon } from './components/icons';
 
 const App: React.FC = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -21,8 +23,22 @@ const App: React.FC = () => {
       model: ''
   });
 
-  // Load leads from database on mount
+  // Check authentication on mount
   useEffect(() => {
+    const auth = sessionStorage.getItem('dashboard-auth');
+    if (auth === 'true') {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  const handleAuthenticated = useCallback(() => {
+    setIsAuthenticated(true);
+  }, []);
+
+  // Load leads from database on mount (only when authenticated)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
     const loadLeads = async () => {
       try {
         setIsLoading(true);
@@ -46,7 +62,7 @@ const App: React.FC = () => {
     }
 
     loadLeads();
-  }, []);
+  }, [isAuthenticated]);
 
   const handleSaveApiConfig = useCallback((config: ApiConfig) => {
       setApiConfig(config);
@@ -119,6 +135,11 @@ const App: React.FC = () => {
       throw error;
     }
   }, []);
+
+  // Show password modal if not authenticated
+  if (!isAuthenticated) {
+    return <PasswordModal onAuthenticated={handleAuthenticated} />;
+  }
 
   return (
     <div className="min-h-screen text-[--text-primary] bg-[--background-dark]">
